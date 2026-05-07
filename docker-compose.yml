@@ -115,6 +115,8 @@ services:
         condition: service_healthy
       redis-user:
         condition: service_healthy
+      user-migrations:
+        condition: service_completed_successfully
       kafka-topics-init:
         condition: service_completed_successfully
     networks:
@@ -139,6 +141,29 @@ services:
     networks:
       - backend-network
     restart: unless-stopped
+
+  user-migrations:
+    image: postgres:15-alpine
+    container_name: user-migrations
+    environment:
+      PGPASSWORD: user_password
+    volumes:
+      - ../user_service/user-service/migrations:/migrations:ro
+    depends_on:
+      db-user:
+        condition: service_healthy
+    command:
+      - sh
+      - -c
+      - |
+        if [ "$$(psql -h db-user -U user -d userdb -tAc "SELECT to_regclass('public.users')")" = "users" ] && [ "$$(psql -h db-user -U user -d userdb -tAc "SELECT to_regclass('public.user_settings')")" = "user_settings" ]; then
+          echo "user-service migrations already applied"
+        else
+          psql -h db-user -U user -d userdb -v ON_ERROR_STOP=1 -f /migrations/000001_create_user_table.up.sql
+          psql -h db-user -U user -d userdb -v ON_ERROR_STOP=1 -f /migrations/000002_create_user_settings_table.up.sql
+        fi
+    networks:
+      - backend-network
 
   redis-user:
     image: redis:7-alpine
