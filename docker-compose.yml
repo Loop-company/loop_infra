@@ -213,7 +213,7 @@ services:
     volumes:
       - zookeeper_data:/var/lib/zookeeper/data
     healthcheck:
-      test: ["CMD", "bash", "-c", "echo stat | nc localhost 2181 | grep Mode"]
+      test: ["CMD", "bash", "-c", "echo srvr | nc localhost 2181 | grep Mode"]
       interval: 10s
       timeout: 5s
       retries: 5
